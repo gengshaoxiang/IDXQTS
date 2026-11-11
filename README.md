@@ -48,11 +48,19 @@ streamlit run dashboard.py
 streamlit run live_scanner.py --server.port 8503
 ```
 
+#### 启动「航屿 (Hangyu OS)」人生与战略工作台
+```bash
+cd hangyu-workbench
+npm install
+npm run dev
+```
+
 > **系统提示**：所有面板均基于 Streamlit 构建，启动后会自动在浏览器中打开相应的监控大屏 (默认地址为 `http://localhost:8501` 或对应的指定端口)。
 
 ## 📚 目录结构说明
 
 ```text
+├── hangyu-workbench/         # 「航屿 (Hangyu OS)」船长的人生与战略工作台 (React + TS + Vite)
 ├── advanced_backtest.py      # 带 PE 过滤和网格搜索的进阶回测引擎
 ├── batch_backtest.py         # 批量股票测试脚本
 ├── dashboard.py              # 历史回测可视化 UI 面板

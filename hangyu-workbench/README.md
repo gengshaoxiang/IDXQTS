@@ -20,7 +20,7 @@
 ## 本地启动
 
 ```bash
-cd workbench
+cd hangyu-workbench
 npm install
 npm run dev
 ```
