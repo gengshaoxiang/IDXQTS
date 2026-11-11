@@ -1,0 +1,167 @@
+@import "tailwindcss";
+
+:root {
+  --font-sans: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Noto Sans CJK SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+
+  --bg-mesh-1: #e4ecfb;
+  --bg-mesh-2: #dce5f7;
+  --bg-mesh-3: #edf1fc;
+  --bg-orb-1: rgba(124, 93, 250, 0.13);
+  --bg-orb-2: rgba(56, 189, 248, 0.12);
+
+  --glass-surface: rgba(255, 255, 255, 0.78);
+  --glass-surface-strong: rgba(255, 255, 255, 0.91);
+  --glass-subtle: rgba(244, 247, 253, 0.76);
+  --glass-border: rgba(255, 255, 255, 0.88);
+  --glass-inner-border: rgba(148, 163, 184, 0.18);
+  --glass-shadow: 0 14px 38px -12px rgba(45, 62, 102, 0.12), 0 2px 8px rgba(45, 62, 102, 0.04);
+
+  --text-primary: #152033;
+  --text-secondary: #526077;
+  --text-muted: #8492a6;
+
+  --accent-primary: #6366f1;
+  --accent-secondary: #7c5dfa;
+  --accent-soft: rgba(99, 102, 241, 0.12);
+  --action-teal: #1d4f5f;
+  --action-teal-hover: #163e4b;
+}
+
+[data-theme="dark"] {
+  --bg-mesh-1: #0b101d;
+  --bg-mesh-2: #101728;
+  --bg-mesh-3: #0d1322;
+  --bg-orb-1: rgba(99, 102, 241, 0.16);
+  --bg-orb-2: rgba(20, 184, 166, 0.1);
+
+  --glass-surface: rgba(19, 26, 41, 0.82);
+  --glass-surface-strong: rgba(22, 30, 48, 0.94);
+  --glass-subtle: rgba(28, 38, 59, 0.72);
+  --glass-border: rgba(148, 163, 184, 0.15);
+  --glass-inner-border: rgba(148, 163, 184, 0.13);
+  --glass-shadow: 0 18px 44px -12px rgba(2, 6, 23, 0.65), 0 2px 10px rgba(2, 6, 23, 0.4);
+
+  --text-primary: #eef2f9;
+  --text-secondary: #9fb0c7;
+  --text-muted: #697a94;
+
+  --accent-soft: rgba(124, 93, 250, 0.2);
+  --action-teal: #256478;
+  --action-teal-hover: #2d7890;
+}
+
+[data-accent="indigo"] {
+  --accent-primary: #5b67f1;
+  --accent-secondary: #7c5dfa;
+}
+[data-accent="violet"] {
+  --accent-primary: #7c3aed;
+  --accent-secondary: #9333ea;
+}
+[data-accent="forest"] {
+  --accent-primary: #1f7a5c;
+  --accent-secondary: #2c9672;
+}
+[data-accent="rose"] {
+  --accent-primary: #e11d48;
+  --accent-secondary: #f43f5e;
+}
+[data-accent="ocean"] {
+  --accent-primary: #1d4f5f;
+  --accent-secondary: #2b7288;
+}
+[data-accent="slate"] {
+  --accent-primary: #334155;
+  --accent-secondary: #475569;
+}
+
+[data-fontsize="compact"] {
+  font-size: 13px;
+}
+[data-fontsize="standard"] {
+  font-size: 14px;
+}
+[data-fontsize="relaxed"] {
+  font-size: 15px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.hangyu-bg {
+  background:
+    radial-gradient(circle at 14% 16%, var(--bg-orb-1) 0%, transparent 42%),
+    radial-gradient(circle at 86% 78%, var(--bg-orb-2) 0%, transparent 45%),
+    linear-gradient(135deg, var(--bg-mesh-1) 0%, var(--bg-mesh-2) 52%, var(--bg-mesh-3) 100%);
+}
+
+.glass-card {
+  background: var(--glass-surface);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-sheet {
+  background: var(--glass-surface-strong);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 24px 64px -16px rgba(15, 23, 42, 0.28);
+}
+
+.glass-subcard {
+  background: var(--glass-subtle);
+  border: 1px solid var(--glass-inner-border);
+}
+
+.nav-pill-active {
+  background: linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+  color: #ffffff;
+  box-shadow: 0 6px 18px -4px rgba(99, 102, 241, 0.42);
+}
+
+.btn-teal {
+  background: var(--action-teal);
+  color: #ffffff;
+  transition: all 0.18s ease;
+}
+.btn-teal:hover {
+  background: var(--action-teal-hover);
+  transform: translateY(-0.5px);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.32);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.52);
+}
