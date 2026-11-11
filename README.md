@@ -1,59 +1,68 @@
-# Captain Lab · 个人数字工程与自研应用总仓
+# QuantVision (IDXQTS) - 印度尼西亚量化交易与监控系统
 
-本仓库采用**多项目独立分仓（Monorepo）**目录规范，按独立子文件夹隔离不同技术栈与业务领域的自研系统，互不干扰、统一归档。
+QuantVision 是一个专为 **印尼证券交易所 (IDX - LQ45)** 打造的“三位一体”高级量化交易与实时监控系统。它集成了历史数据回测、参数网格优化、单股日内极速追踪，以及多目标全景雷达扫描四大核心模块。
 
-## 项目目录总览
+## 🌟 核心功能架构
 
-| 文件夹 | 项目名称 | 定位与核心能力 | 技术栈 |
-| --- | --- | --- | --- |
-| [`hangyu-workbench/`](./hangyu-workbench) | **航屿 (Hangyu OS)** | 个人战略与人生工作台（Bento 主工作台、战略项目、日知 14 栏、双链笔记、汇率量化、人生罗盘 8 维雷达、工具箱） | React 19 + TypeScript + Vite + Tailwind CSS |
-| [`idxqts/`](./idxqts) | **QuantVision (IDXQTS)** | 印尼证券交易所（IDX · LQ45）双均线历史回测、参数寻优与分钟级实时雷达监控系统 | Python + Streamlit + Pandas + Plotly + yfinance |
+本系统由三个独立的运行舱室组成，以应对专业交易员的不同盯盘与研发需求：
 
-## 目录结构规范
+1. **🔬 历史回测与参数寻优舱 (`dashboard.py`)**
+   * 功能：盘后分析，拖动滑块寻找并优化每只股票的最佳历史交易参数（移动平均线双盲测试）。
+   * 数据：本地高质量清洗后的日线 CSV 数据，含除权除息处理。
+   * 特性：带有千分之1.5手续费与万分之5滑点的真实盈亏曲线模拟。
 
-```text
-.
-├── hangyu-workbench/         # 独立项目一：航屿个人战略与人生工作台
-│   ├── src/                  # 前端核心组件、11 大业务舱室与本地存储引擎
-│   ├── package.json          # 前端依赖与构建脚本
-│   └── README.md             # 航屿项目专属文档
-├── idxqts/                   # 独立项目二：印尼 LQ45 量化交易与实时监控系统
-│   ├── dashboard.py          # 历史回测可视化面板
-│   ├── live_dashboard.py     # 单股日内实时监控面板
-│   ├── live_scanner.py       # 多目标全景扫描雷达
-│   ├── advanced_backtest.py  # PE 基本面筛选 + 网格参数寻优
-│   ├── batch_backtest.py     # 批量 RSI 过滤回测
-│   ├── download_lq45.py      # 历史行情抓取与清洗
-│   ├── requirements.txt      # Python 依赖清单
-│   └── README.md             # IDXQTS 量化系统专属文档
-├── .gitignore                # 全局忽略规则（隔离缓存、数据集、构建产物与环境变量）
-└── README.md                 # 总仓导航与目录治理规范
+2. **👁️ 单股深度追踪仪 (`live_dashboard.py`)**
+   * 功能：实时日内波段监控（1 分钟级别）。
+   * 数据：直连雅虎金融 (yfinance) 实时行情。
+   * 特性：带有自动刷新机制 (60秒)，适用于狙击单只目标股票的最佳日内介入点。
+
+3. **📡 多目标全景雷达扫描仪 (`live_scanner.py`)**
+   * 功能：盘中常开雷达，监控整个自选股池（默认 LQ45 核心成分股）。
+   * 特性：多线程并发获取行情。一旦池中任意股票发生极其短线的趋势破位（如 5分钟/15分钟金叉死叉），大屏最上方将立即弹出 **🚨 突发交易指令卡片**。
+
+## 🚀 快速部署与安装指南
+
+### 1. 环境准备
+确保您的计算机已安装 Python 3.9 或更高版本。
+克隆本仓库到本地：
+```bash
+git clone https://github.com/gengshaoxiang/IDXQTS.git
+cd IDXQTS
 ```
 
-## 快速启动指南
-
-### 1. 启动「航屿 (Hangyu OS)」人生工作台
-
+### 2. 安装依赖
+建议使用虚拟环境，然后执行一键安装：
 ```bash
-cd hangyu-workbench
-npm install
-npm run dev
-```
-
-### 2. 启动「QuantVision (IDXQTS)」印尼量化系统
-
-```bash
-cd idxqts
 pip install -r requirements.txt
+```
+
+### 3. 启动系统
+
+#### 启动历史回测面板
+```bash
+streamlit run dashboard.py
+```
+
+#### 启动多股雷达监控 (推荐盘中使用)
+```bash
 streamlit run live_scanner.py --server.port 8503
 ```
 
-## 新增项目扩展规范
+> **系统提示**：所有面板均基于 Streamlit 构建，启动后会自动在浏览器中打开相应的监控大屏 (默认地址为 `http://localhost:8501` 或对应的指定端口)。
 
-后续在本仓库新增独立项目时，建议遵循统一短横线小写目录命名（`kebab-case`），例如：
+## 📚 目录结构说明
 
-- `rizhi-reader/`：日知 14 栏每日订阅阅读站与移动端应用
-- `agent-workflows/`：企业与个人自动化 Agent 脚本与集成工具
-- `espresso-lab/`：意式浓缩调豆与器物工具实验台
+```text
+├── advanced_backtest.py      # 带 PE 过滤和网格搜索的进阶回测引擎
+├── batch_backtest.py         # 批量股票测试脚本
+├── dashboard.py              # 历史回测可视化 UI 面板
+├── live_dashboard.py         # 单只股票实时日内追踪 UI 面板
+├── live_scanner.py           # 多目标全景雷达扫描 UI 面板
+├── download_lq45.py          # LQ45 成分股历史数据自动化爬取清洗脚本
+├── requirements.txt          # Python 依赖清单
+├── README.md                 # 部署技术文档
+└── .gitignore                # Git 忽略配置
+```
 
-每个子文件夹内保持独立的依赖描述文件（如 `package.json` 或 `requirements.txt`）与专属 `README.md`。
+## ⚠️ 免责声明
+本项目代码仅供量化交易技术研究与交流学习使用。系统发出的所有“买入/卖出”警报均基于历史回测模型和移动平均线算法得出，**绝不构成任何具体的投资建议**。金融市场具有极高风险，印尼股市受宏观政策及汇率影响极大，请在实盘交易前进行充分的独立研究，开发者不对任何由使用该系统引发的直接或间接投资损失负责。

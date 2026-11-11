@@ -1,15 +1,9 @@
-# Python byte-compiled / cache
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Node / Frontend build & dependencies
-node_modules/
-dist/
-dist-ssr/
-*.local
-
-# Quant local data files and generated outputs
+# Data files and large directories
 *.csv
 *.png
 lq45_data/
@@ -18,17 +12,18 @@ aice_hem/
 start_scanner.bat
 USER_PROFILE.md
 
-# Environment & secrets
+# Environment files
 .env
-.env.*
-.venv/
+.venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
 
-# Tooling & OS files
+# Streamlit configuration
 .streamlit/
+
+# OS generated files
 .DS_Store
 Thumbs.db
