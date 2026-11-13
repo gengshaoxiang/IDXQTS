@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// 评价周期
+model EvalCycle {
+  id         String   @id @default(uuid())
+  cycleName  String
+  cycleYear  Int
+  status     String   @default("DRAFT") // DRAFT, ACTIVE, CALIBRATING, PUBLISHED, ARCHIVED
+  secretSalt String
+  startTime  DateTime
+  endTime    DateTime
+  createdAt  DateTime @default(now())
+
+  subjects  EvalSubject[]
+  relations EvalRelation[]
+  ballots   EvalBallot[]
+  vetoes    ComplianceVeto[]
+  results   EvalResult[]
+}
+
+/// 差异化权重配置模板
+model WeightTemplate {
+  id               String   @id @default(uuid())
+  templateCode     String   @unique
+  templateName     String
+  dimensionWeights String // JSON
+  roleWeights      String // JSON
+  createdAt        DateTime @default(now())
+
+  subjects EvalSubject[]
+}
+
+/// 被评价高管 + BI 指标快照
+model EvalSubject {
+  id                 String   @id @default(uuid())
+  cycleId            String
+  userId             String
+  userName           String
+  departmentName     String
+  positionTitle      String
+  templateId         String
+  biKpiSnapshot      String? // JSON
+  kpiObjectiveScore  Float?
+
+  cycle      EvalCycle      @relation(fields: [cycleId], references: [id])
+  template   WeightTemplate @relation(fields: [templateId], references: [id])
+  relations  EvalRelation[]
+  ballots    EvalBallot[]
+  vetoes     ComplianceVeto[]
+  result     EvalResult?
+
+  @@unique([cycleId, userId])
+}
+
+/// 评价关系任务（含评价人身份，不直接挂选票明细）
+model EvalRelation {
+  id              String    @id @default(uuid())
+  cycleId         String
+  subjectId       String
+  evaluatorUserId String
+  relationRole    String // CEO, FIN_STRAT, HRD, PEER, SUBORDINATE, BOARD
+  taskStatus      String    @default("PENDING") // PENDING, COMPLETED, EXPIRED
+  submittedAt     DateTime?
+
+  cycle   EvalCycle   @relation(fields: [cycleId], references: [id])
+  subject EvalSubject @relation(fields: [subjectId], references: [id])
+
+  @@unique([cycleId, subjectId, evaluatorUserId, relationRole])
+}
+
+/// 匿名隔离选票
+model EvalBallot {
+  id                   String   @id @default(uuid())
+  cycleId              String
+  subjectId            String
+  evaluatorBlindToken  String
+  relationRole         String
+  scoresPayload        String // JSON
+  rawWeightedScore     Float
+  calibratedScore      Float?
+  createdAt            DateTime @default(now())
+
+  cycle   EvalCycle   @relation(fields: [cycleId], references: [id])
+  subject EvalSubject @relation(fields: [subjectId], references: [id])
+
+  @@unique([cycleId, subjectId, evaluatorBlindToken, relationRole])
+}
+
+/// 审计风控一票否决
+model ComplianceVeto {
+  id               String   @id @default(uuid())
+  cycleId          String
+  subjectId        String
+  severityLevel    String // MINOR_DOWNGRADE, CRITICAL_VETO
+  incidentCategory String
+  incidentSummary  String
+  evidenceRefNo    String
+  reportedBy       String
+  approvedBy       String?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  cycle   EvalCycle   @relation(fields: [cycleId], references: [id])
+  subject EvalSubject @relation(fields: [subjectId], references: [id])
+}
+
+/// 最终得分与校准评级
+model EvalResult {
+  id                 String   @id @default(uuid())
+  cycleId            String
+  subjectId          String   @unique
+  dimensionScores    String // JSON
+  subordinatePooled  Boolean  @default(false)
+  computedTotalScore Float
+  systemGrade        String
+  vetoApplied        Boolean  @default(false)
+  finalGrade         String
+  calibrationRemark  String?
+  updatedAt          DateTime @updatedAt
+
+  cycle   EvalCycle   @relation(fields: [cycleId], references: [id])
+  subject EvalSubject @relation(fields: [subjectId], references: [id])
+
+  @@unique([cycleId, subjectId])
+}
+
+/// 演示用用户（生产环境由企业微信 SSO 替换）
+model AppUser {
+  id       String @id // 工号 / 企微 UserID
+  name     String
+  role     String // ROLE_*
+  title    String
+  deptName String
+}
+
+/// 只增不删审计日志
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  action     String
+  entityType String
+  entityId   String
+  beforeJson String?
+  afterJson  String?
+  ip         String?
+  createdAt  DateTime @default(now())
+}
