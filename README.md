@@ -8,6 +8,7 @@
 | --- | --- | --- | --- |
 | [`hangyu-workbench/`](./hangyu-workbench) | **航屿 (Hangyu OS)** | 个人战略与人生工作台（Bento 主工作台、战略项目、日知 14 栏、双链笔记、汇率量化、人生罗盘 8 维雷达、工具箱） | React 19 + TypeScript + Vite + Tailwind CSS |
 | [`idxqts/`](./idxqts) | **QuantVision (IDXQTS)** | 印尼证券交易所（IDX · LQ45）双均线历史回测、参数寻优与分钟级实时雷达监控系统 | Python + Streamlit + Pandas + Plotly + yfinance |
+| [`ees/`](./ees) | **EES 高管评价系统** | 集团高管四维评价 + STAR 举证 / Z-Score 校准 / 下属池化匿名 / 风控一票否决 | Next.js + Prisma + SQLite + ECharts |
 
 ## 目录结构规范
 
@@ -26,9 +27,15 @@
 │   ├── download_lq45.py      # 历史行情抓取与清洗
 │   ├── requirements.txt      # Python 依赖清单
 │   └── README.md             # IDXQTS 量化系统专属文档
+├── ees/                      # 独立项目三：集团高管在线评价系统（EES）
+│   ├── prisma/               # 数据模型与种子数据
+│   ├── src/lib/scoring/      # STAR / Z-Score / 池化 / 熔断引擎
+│   ├── src/app/              # Next.js 页面与 API
+│   └── README.md             # EES 专属文档
 ├── .gitignore                # 全局忽略规则（隔离缓存、数据集、构建产物与环境变量）
 └── README.md                 # 总仓导航与目录治理规范
 ```
+
 
 ## 快速启动指南
 
@@ -47,6 +54,17 @@ cd idxqts
 pip install -r requirements.txt
 streamlit run live_scanner.py --server.port 8503
 ```
+
+### 3. 启动「EES」集团高管在线评价系统
+
+```bash
+cd ees
+npm install
+npx prisma db push
+npm run db:seed
+npm run dev
+```
+
 
 ## 新增项目扩展规范
 
