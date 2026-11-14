@@ -1,27 +1,37 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/auth";
+import {
+  canEnterVeto,
+  canViewCalibration,
+  jsonPrivate,
+  requirePrivilegedViewer,
+} from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
-  _req: NextRequest,
+  req: Request,
   ctx: { params: Promise<{ cycleId: string }> },
 ) {
-  const user = await getSessionUser();
-  if (!user) {
-    return NextResponse.json({ code: 401, message: "未登录" }, { status: 401 });
+  const user = await requirePrivilegedViewer(req);
+  if (user instanceof Response) {
+    return user;
   }
+  if (!canViewCalibration(user.role) && !canEnterVeto(user.role)) {
+    return jsonPrivate({ code: 403, message: "无权限" }, { status: 403 });
+  }
+
   const { cycleId } = await ctx.params;
   const subjects = await prisma.evalSubject.findMany({
     where: { cycleId },
     orderBy: { userName: "asc" },
   });
-  return NextResponse.json({
-    code: 200,
-    data: subjects.map((s) => ({
-      id: s.id,
-      userName: s.userName,
-      positionTitle: s.positionTitle,
-      departmentName: s.departmentName,
-    })),
-  });
+
+  const data = subjects.map((s) => ({
+    id: s.id,
+    userName: s.userName,
+    positionTitle: s.positionTitle,
+    departmentName: s.departmentName,
+  }));
+
+  return jsonPrivate({ code: 200, data });
 }

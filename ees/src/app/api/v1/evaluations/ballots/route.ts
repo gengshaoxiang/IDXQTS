@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { canSubmitBallot, getSessionUser } from "@/lib/auth";
+import { canSubmitBallot, jsonPrivate, resolveSessionUser } from "@/lib/auth";
 import { makeBlindToken } from "@/lib/crypto/blind-token";
 import { prisma } from "@/lib/prisma";
 import { computeRawWeightedScore } from "@/lib/scoring/calculate";
 import { validateStarEvidence } from "@/lib/scoring/star-validation";
+
+export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
   relationId: z.string().min(1),
@@ -27,15 +28,16 @@ const bodySchema = z.object({
     .min(1),
 });
 
-export async function POST(req: NextRequest) {
-  const user = await getSessionUser();
-  if (!user || !canSubmitBallot(user.role)) {
-    return NextResponse.json({ code: 403, message: "无权限" }, { status: 403 });
+export async function POST(req: Request) {
+  const user = await resolveSessionUser(req);
+  if (user instanceof Response) return user;
+  if (!canSubmitBallot(user.role)) {
+    return jsonPrivate({ code: 403, message: "无权限" }, { status: 403 });
   }
 
   const parsed = bodySchema.safeParse(await req.json());
   if (!parsed.success) {
-    return NextResponse.json(
+    return jsonPrivate(
       { code: 400, message: "参数错误", details: parsed.error.flatten() },
       { status: 400 },
     );
@@ -48,16 +50,16 @@ export async function POST(req: NextRequest) {
   });
 
   if (!relation || relation.evaluatorUserId !== user.id) {
-    return NextResponse.json({ code: 404, message: "任务不存在" }, { status: 404 });
+    return jsonPrivate({ code: 404, message: "任务不存在" }, { status: 404 });
   }
   if (relation.cycle.status !== "ACTIVE") {
-    return NextResponse.json(
+    return jsonPrivate(
       { code: 409, message: "周期非 ACTIVE，禁止提交" },
       { status: 409 },
     );
   }
   if (relation.taskStatus === "COMPLETED") {
-    return NextResponse.json(
+    return jsonPrivate(
       { code: 409, message: "该评价任务已提交，禁止重复提交或篡改" },
       { status: 409 },
     );
@@ -65,7 +67,7 @@ export async function POST(req: NextRequest) {
 
   const starCheck = validateStarEvidence(scores);
   if (!starCheck.ok) {
-    return NextResponse.json(
+    return jsonPrivate(
       {
         code: 422,
         message: "触发极端分数阈值但缺少有效 STAR 行为举证",
@@ -109,14 +111,13 @@ export async function POST(req: NextRequest) {
             relationRole: relation.relationRole,
             rawWeightedScore,
           }),
-          ip: req.headers.get("x-forwarded-for") ?? undefined,
         },
       });
     });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg.includes("Unique constraint")) {
-      return NextResponse.json(
+      return jsonPrivate(
         { code: 409, message: "该评价任务已提交，禁止重复提交或篡改" },
         { status: 409 },
       );
@@ -124,5 +125,5 @@ export async function POST(req: NextRequest) {
     throw e;
   }
 
-  return NextResponse.json({ code: 200, data: { ok: true, rawWeightedScore } });
+  return jsonPrivate({ code: 200, data: { ok: true, rawWeightedScore } });
 }

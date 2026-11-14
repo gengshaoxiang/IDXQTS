@@ -1,25 +1,29 @@
-import { NextRequest, NextResponse } from "next/server";
-import { DEMO_USER_COOKIE, getSessionUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import {
+  getOptionalSessionUser,
+  jsonPrivate,
+  resolveSessionUser,
+} from "@/lib/auth";
 
-export async function GET() {
-  const user = await getSessionUser();
-  const users = await prisma.appUser.findMany({ orderBy: { id: "asc" } });
-  return NextResponse.json({ code: 200, data: { user, users } });
+export const dynamic = "force-dynamic";
+
+/** Current signed-in Cursor viewer only — never accepts a client-supplied user id. */
+export async function GET(request: Request) {
+  const user = await getOptionalSessionUser(request);
+  return jsonPrivate({
+    code: 200,
+    data: {
+      user,
+      authMode: "cursor_identity",
+      note: user?.simulated
+        ? "本地开发为模拟身份，发布后以 Cursor 登录为准"
+        : undefined,
+    },
+  });
 }
 
-export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const userId = String(body.userId ?? "");
-  const user = await prisma.appUser.findUnique({ where: { id: userId } });
-  if (!user) {
-    return NextResponse.json({ code: 404, message: "用户不存在" }, { status: 404 });
-  }
-  const res = NextResponse.json({ code: 200, data: user });
-  res.cookies.set(DEMO_USER_COOKIE, user.id, {
-    httpOnly: true,
-    path: "/",
-    sameSite: "lax",
-  });
-  return res;
+/** Handshake: verify Cursor identity and upsert the app user. No body userId. */
+export async function POST(request: Request) {
+  const user = await resolveSessionUser(request);
+  if (user instanceof Response) return user;
+  return jsonPrivate({ code: 200, data: { user } });
 }

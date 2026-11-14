@@ -11,6 +11,8 @@ type User = {
   role: string;
   title: string;
   deptName: string;
+  email?: string;
+  simulated?: boolean;
 };
 
 const NAV = [
@@ -24,28 +26,22 @@ const NAV = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-
-  async function refresh() {
-    const res = await fetch("/api/v1/session");
-    const json = await res.json();
-    setUser(json.data?.user ?? null);
-    setUsers(json.data?.users ?? []);
-  }
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
-    refresh();
+    fetch("/api/v1/session", { method: "POST" })
+      .then(async (r) => {
+        const json = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          setAuthError(json.message ?? "需要 Cursor 登录");
+          setUser(null);
+          return;
+        }
+        setUser(json.data?.user ?? null);
+        setAuthError(null);
+      })
+      .catch(() => setAuthError("无法验证登录状态"));
   }, []);
-
-  async function switchUser(userId: string) {
-    await fetch("/api/v1/session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId }),
-    });
-    await refresh();
-    window.location.reload();
-  }
 
   return (
     <div className="atmosphere min-h-screen">
@@ -76,32 +72,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ))}
           </nav>
 
-          <div className="flex max-w-full flex-col items-end gap-1 text-xs sm:text-sm">
-            <span className="text-ink-soft">
-              演示身份
-              {user ? `：${user.name}` : "：未选择"}
-            </span>
-            <div className="flex max-w-[520px] flex-wrap justify-end gap-1">
-              {users
-                .filter((u) =>
-                  ["U_HRD", "U_AUDIT", "U_CEO", "U_SUB1", "U_PEER1"].includes(u.id),
-                )
-                .map((u) => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => switchUser(u.id)}
-                    className={clsx(
-                      "rounded-md border px-2 py-1 transition",
-                      user?.id === u.id
-                        ? "border-sea bg-sea text-white"
-                        : "border-[var(--line)] bg-white/70 text-ink-soft hover:border-sea/40 hover:text-ink",
-                    )}
-                  >
-                    {u.name}
-                  </button>
-                ))}
-            </div>
+          <div className="text-right text-xs sm:text-sm">
+            {user ? (
+              <>
+                <p className="font-medium text-ink">{user.name}</p>
+                <p className="text-ink-soft">
+                  {user.role.replace("ROLE_", "")}
+                  {user.simulated ? " · 本地模拟身份" : " · Cursor 登录"}
+                </p>
+              </>
+            ) : (
+              <p className="text-copper">{authError ?? "验证登录中…"}</p>
+            )}
           </div>
         </div>
       </header>

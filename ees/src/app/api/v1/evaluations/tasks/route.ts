@@ -1,14 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/auth";
+import { jsonPrivate, resolveSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(req: NextRequest) {
-  const user = await getSessionUser();
-  if (!user) {
-    return NextResponse.json({ code: 401, message: "未登录" }, { status: 401 });
-  }
+export const dynamic = "force-dynamic";
 
-  const cycleId = req.nextUrl.searchParams.get("cycleId");
+export async function GET(req: Request) {
+  const user = await resolveSessionUser(req);
+  if (user instanceof Response) return user;
+
+  const url = new URL(req.url);
+  const cycleId = url.searchParams.get("cycleId");
   const cycle = cycleId
     ? await prisma.evalCycle.findUnique({ where: { id: cycleId } })
     : await prisma.evalCycle.findFirst({
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
       });
 
   if (!cycle) {
-    return NextResponse.json({ code: 404, message: "无评价周期" }, { status: 404 });
+    return jsonPrivate({ code: 404, message: "无评价周期" }, { status: 404 });
   }
 
   const relations = await prisma.evalRelation.findMany({
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     orderBy: { subject: { userName: "asc" } },
   });
 
-  return NextResponse.json({
+  return jsonPrivate({
     code: 200,
     data: {
       cycleId: cycle.id,

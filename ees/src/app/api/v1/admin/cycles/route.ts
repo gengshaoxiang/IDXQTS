@@ -1,11 +1,17 @@
-import { NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/auth";
+import {
+  canManageWeights,
+  jsonPrivate,
+  requirePrivilegedViewer,
+} from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
-  const user = await getSessionUser();
-  if (!user) {
-    return NextResponse.json({ code: 401, message: "未登录" }, { status: 401 });
+export const dynamic = "force-dynamic";
+
+export async function GET(req: Request) {
+  const user = await requirePrivilegedViewer(req);
+  if (user instanceof Response) return user;
+  if (!canManageWeights(user.role)) {
+    return jsonPrivate({ code: 403, message: "无权限" }, { status: 403 });
   }
 
   const cycles = await prisma.evalCycle.findMany({
@@ -15,7 +21,7 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json({
+  return jsonPrivate({
     code: 200,
     data: cycles.map((c) => ({
       id: c.id,

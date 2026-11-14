@@ -1,21 +1,27 @@
-import { NextRequest, NextResponse } from "next/server";
-import { canTriggerCalculate, getSessionUser } from "@/lib/auth";
+import {
+  canTriggerCalculate,
+  jsonPrivate,
+  requirePrivilegedViewer,
+} from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { runCycleCalculation } from "@/lib/scoring/run-cycle";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(
-  _req: NextRequest,
+  req: Request,
   ctx: { params: Promise<{ cycleId: string }> },
 ) {
-  const user = await getSessionUser();
-  if (!user || !canTriggerCalculate(user.role)) {
-    return NextResponse.json({ code: 403, message: "无权限" }, { status: 403 });
+  const user = await requirePrivilegedViewer(req);
+  if (user instanceof Response) return user;
+  if (!canTriggerCalculate(user.role)) {
+    return jsonPrivate({ code: 403, message: "无权限" }, { status: 403 });
   }
 
   const { cycleId } = await ctx.params;
   const cycle = await prisma.evalCycle.findUnique({ where: { id: cycleId } });
   if (!cycle) {
-    return NextResponse.json({ code: 404, message: "周期不存在" }, { status: 404 });
+    return jsonPrivate({ code: 404, message: "周期不存在" }, { status: 404 });
   }
 
   const results = await runCycleCalculation(cycleId);
@@ -37,5 +43,5 @@ export async function POST(
     },
   });
 
-  return NextResponse.json({ code: 200, data: { results } });
+  return jsonPrivate({ code: 200, data: { results } });
 }

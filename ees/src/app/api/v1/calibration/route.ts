@@ -1,20 +1,27 @@
-import { NextRequest, NextResponse } from "next/server";
-import { canViewCalibration, getSessionUser } from "@/lib/auth";
+import {
+  canViewCalibration,
+  jsonPrivate,
+  requirePrivilegedViewer,
+} from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(req: NextRequest) {
-  const user = await getSessionUser();
-  if (!user || !canViewCalibration(user.role)) {
-    return NextResponse.json({ code: 403, message: "无权限" }, { status: 403 });
+export const dynamic = "force-dynamic";
+
+export async function GET(req: Request) {
+  const user = await requirePrivilegedViewer(req);
+  if (user instanceof Response) return user;
+  if (!canViewCalibration(user.role)) {
+    return jsonPrivate({ code: 403, message: "无权限" }, { status: 403 });
   }
 
-  const cycleId = req.nextUrl.searchParams.get("cycleId");
+  const url = new URL(req.url);
+  const cycleId = url.searchParams.get("cycleId");
   const cycle = cycleId
     ? await prisma.evalCycle.findUnique({ where: { id: cycleId } })
     : await prisma.evalCycle.findFirst({ orderBy: { createdAt: "desc" } });
 
   if (!cycle) {
-    return NextResponse.json({ code: 404, message: "无周期" }, { status: 404 });
+    return jsonPrivate({ code: 404, message: "无周期" }, { status: 404 });
   }
 
   const results = await prisma.evalResult.findMany({
@@ -29,7 +36,7 @@ export async function GET(req: NextRequest) {
     if (g in distribution) distribution[g] += 1;
   }
 
-  return NextResponse.json({
+  return jsonPrivate({
     code: 200,
     data: {
       cycle: {

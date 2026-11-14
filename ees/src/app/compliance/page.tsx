@@ -4,6 +4,15 @@ import { useEffect, useState } from "react";
 
 type Subject = { id: string; userName: string; positionTitle: string };
 type Cycle = { id: string; cycleName: string };
+type Veto = {
+  id: string;
+  severityLevel: string;
+  evidenceRefNo: string;
+  isActive: boolean;
+  reportedBy: string;
+  approvedBy: string | null;
+  subject: { userName: string };
+};
 
 export default function CompliancePage() {
   const [cycles, setCycles] = useState<Cycle[]>([]);
@@ -14,58 +23,27 @@ export default function CompliancePage() {
   const [incidentCategory, setIncidentCategory] = useState("FINANCE_AUDIT");
   const [incidentSummary, setIncidentSummary] = useState("");
   const [evidenceRefNo, setEvidenceRefNo] = useState("");
-  const [approvedBy, setApprovedBy] = useState("U_HRD");
   const [message, setMessage] = useState<string | null>(null);
-  const [vetoes, setVetoes] = useState<
-    Array<{
-      id: string;
-      severityLevel: string;
-      evidenceRefNo: string;
-      subject: { userName: string };
-    }>
-  >([]);
+  const [vetoes, setVetoes] = useState<Veto[]>([]);
+  const [meId, setMeId] = useState<string | null>(null);
+
+  async function loadVetoes() {
+    const list = await fetch("/api/v1/compliance/vetoes").then((r) => r.json());
+    setVetoes(list.data ?? []);
+  }
 
   useEffect(() => {
+    fetch("/api/v1/session", { method: "POST" })
+      .then((r) => r.json())
+      .then((j) => setMeId(j.data?.user?.id ?? null));
     fetch("/api/v1/admin/cycles")
       .then((r) => r.json())
       .then((j) => {
         setCycles(j.data ?? []);
         if (j.data?.[0]) setCycleId(j.data[0].id);
       });
-    fetch("/api/v1/compliance/vetoes")
-      .then((r) => r.json())
-      .then((j) => setVetoes(j.data ?? []));
+    loadVetoes();
   }, []);
-
-  useEffect(() => {
-    if (!cycleId) return;
-    // 通过校准接口拿 subjects（若无权则用报告列表降级：种子固定）
-    fetch(`/api/v1/calibration?cycleId=${cycleId}`)
-      .then(async (r) => {
-        if (!r.ok) {
-          // fallback: seed subjects via calculate page not available — hardcode from tasks won't work
-          setSubjects([]);
-          return;
-        }
-        const j = await r.json();
-        const rows = (j.data.nineBox ?? []).map(
-          (x: { subjectId: string; userName: string; positionTitle: string }) => ({
-            id: x.subjectId,
-            userName: x.userName,
-            positionTitle: x.positionTitle,
-          }),
-        );
-        if (rows.length) {
-          setSubjects(rows);
-          setSubjectId(rows[0].id);
-        } else {
-          // 尚未出分时，从周期 subjects API 不存在——用 seed 后 calculate 前的途径
-          const calcHint = await fetch("/api/v1/evaluations/tasks");
-          // 额外：直接查一个轻量 subjects 列表
-          void calcHint;
-        }
-      });
-  }, [cycleId]);
 
   useEffect(() => {
     if (!cycleId) return;
@@ -91,7 +69,6 @@ export default function CompliancePage() {
         incidentCategory,
         incidentSummary,
         evidenceRefNo,
-        approvedBy,
       }),
     });
     const j = await res.json();
@@ -99,9 +76,22 @@ export default function CompliancePage() {
       setMessage(j.message ?? "提交失败");
       return;
     }
-    setMessage("风控熔断已录入并触发重算");
-    const list = await fetch("/api/v1/compliance/vetoes").then((r) => r.json());
-    setVetoes(list.data ?? []);
+    setMessage("已提交待复核：需另一 Cursor 登录用户核准后生效");
+    await loadVetoes();
+  }
+
+  async function approve(id: string) {
+    setMessage(null);
+    const res = await fetch(`/api/v1/compliance/vetoes/${id}/approve`, {
+      method: "POST",
+    });
+    const j = await res.json();
+    if (!res.ok) {
+      setMessage(j.message ?? "核准失败");
+      return;
+    }
+    setMessage("已核准并触发重算");
+    await loadVetoes();
   }
 
   return (
@@ -109,7 +99,7 @@ export default function CompliancePage() {
       <div>
         <h1 className="font-display text-4xl">审计风控熔断</h1>
         <p className="mt-2 text-ink-soft">
-          仅 ROLE_AUDIT_OFFICER 可录入；需双人复核（核准人 ≠ 提报人）。
+          提报后为待复核状态；必须由另一已登录用户核准，提报人不可自批。
         </p>
       </div>
 
@@ -176,14 +166,6 @@ export default function CompliancePage() {
           />
         </label>
         <label className="text-sm">
-          核准人（双人复核）
-          <input
-            className="mt-1 w-full rounded-md border border-[var(--line)] bg-white/80 px-3 py-2"
-            value={approvedBy}
-            onChange={(e) => setApprovedBy(e.target.value)}
-          />
-        </label>
-        <label className="text-sm">
           事件摘要
           <textarea
             className="mt-1 min-h-[90px] w-full rounded-md border border-[var(--line)] bg-white/80 px-3 py-2"
@@ -196,20 +178,38 @@ export default function CompliancePage() {
           onClick={submit}
           className="rounded-md bg-copper px-4 py-2.5 text-white hover:opacity-90"
         >
-          录入并熔断
+          提报（待复核）
         </button>
         {message && <p className="text-sm text-sea">{message}</p>}
       </div>
 
       <section>
-        <h2 className="font-display text-2xl">已录入记录</h2>
+        <h2 className="font-display text-2xl">风控记录</h2>
         <ul className="mt-3 space-y-2">
           {vetoes.map((v) => (
             <li
               key={v.id}
-              className="rounded-lg border border-[var(--line)] bg-white/50 px-4 py-3 text-sm"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--line)] bg-white/50 px-4 py-3 text-sm"
             >
-              {v.subject.userName} · {v.severityLevel} · {v.evidenceRefNo}
+              <div>
+                {v.subject.userName} · {v.severityLevel} · {v.evidenceRefNo}
+                <p className="text-ink-soft">
+                  {v.isActive ? "已生效" : "待复核"}
+                  {v.approvedBy ? ` · 核准人已确认` : ""}
+                </p>
+              </div>
+              {!v.isActive && meId && v.reportedBy !== meId && (
+                <button
+                  type="button"
+                  onClick={() => approve(v.id)}
+                  className="rounded-md bg-sea px-3 py-1.5 text-white"
+                >
+                  核准生效
+                </button>
+              )}
+              {!v.isActive && meId && v.reportedBy === meId && (
+                <span className="text-xs text-copper">需其他登录用户核准</span>
+              )}
             </li>
           ))}
         </ul>
